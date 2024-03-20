@@ -1,10 +1,8 @@
-use actix::{Actor, StreamHandler, Addr, Context, Message, Handler, Recipient, AsyncContext};
+use actix::{Actor, StreamHandler, Addr, Context, Message, Handler, Recipient,AsyncContext};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use std::collections::HashMap;
 use uuid::Uuid;
-
-
 
 struct WebSocket {
     id: Uuid,
@@ -21,7 +19,6 @@ impl Actor for WebSocket {
             addr: addr.recipient(),
         });
     }
-    
 
     fn stopping(&mut self, _: &mut Self::Context) -> actix::Running {
         self.server.do_send(Disconnect { id: self.id });
@@ -126,8 +123,22 @@ impl Message for MyWsMessage {
     type Result = ();
 }
 
+struct ListClients;
+
+impl Message for ListClients {
+    type Result = ();
+}
+
+impl Handler<ListClients> for Server {
+    type Result = ();
+
+    fn handle(&mut self, _: ListClients, _: &mut Context<Self>) {
+        println!("Connected clients: {:?}", self.sessions.keys().collect::<Vec<_>>());
+    }
+}
+
+
 async fn chat_route(req: HttpRequest, stream: web::Payload, srv: web::Data<Addr<Server>>) -> Result<HttpResponse, Error> {
-    let id = Uuid::new_v4();
     let resp = ws::start(WebSocket { id: Uuid::new_v4(), server: srv.get_ref().clone() }, &req, stream);
     resp
 }
