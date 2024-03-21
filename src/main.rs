@@ -4,6 +4,8 @@ use actix_web_actors::ws;
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use actix_rt::time::interval;
+
 struct WebSocket {
     id: Uuid,
     server: Addr<Server>,
@@ -79,6 +81,7 @@ impl Handler<Disconnect> for Server {
     type Result = ();
 
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
+        println!("Client {} disconnected", msg.id);
         self.sessions.remove(&msg.id);
     }
 }
@@ -98,7 +101,8 @@ impl Handler<ClientMessage> for Server {
     fn handle(&mut self, msg: ClientMessage, _: &mut Context<Self>) {
         for (id, addr) in &self.sessions {
             if *id != msg.id {
-                let _ = addr.do_send(MyWsMessage(ws::Message::Text(msg.msg.clone())));
+                let message_with_id = format!("{}: {}", msg.id, msg.msg);
+                let _ = addr.do_send(MyWsMessage(ws::Message::Text(message_with_id)));
             }
         }
     }
@@ -147,8 +151,18 @@ async fn chat_route(req: HttpRequest, stream: web::Payload, srv: web::Data<Addr<
 async fn main() -> std::io::Result<()> {
     let server = Server { sessions: HashMap::new() }.start();
 
+    let server_addr = server.clone();
+    actix::spawn(async move {
+        let mut interval = interval(std::time::Duration::from_secs(5));
+        loop {
+            interval.tick().await;
+            server_addr.do_send(ListClients);
+        }
+    });
+
     HttpServer::new(move || App::new().data(server.clone()).route("/ws/", web::get().to(chat_route)))
         .bind("127.0.0.1:8080")?
         .run()
         .await
 }
+

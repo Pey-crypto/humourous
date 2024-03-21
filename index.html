@@ -1,16 +1,17 @@
 <!DOCTYPE html>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
 <html>
 <head>
     <title>Chat</title>
 </head>
 <body>
-    <input id="messageInput" type="text">
-    <button id="sendButton">Send</button>
+  
+    <input class="pure-input-rounded" id="messageInput" type="text">
+    <button id="sendButton" class="pure-button">Send</button>
+  
     <div id="messages"></div>
-
     <script>
         var socket = new WebSocket("ws://127.0.0.1:8080/ws/");
-
         socket.onmessage = function(event) {
             var messages = document.getElementById('messages')
             var message = document.createElement('div')
@@ -28,6 +29,7 @@
             socket.send(input.value);
             input.value = '';
         };
+        window.addEventListener('beforeunload',()=>{socket.close();});
     </script>
 </body>
 </html>
